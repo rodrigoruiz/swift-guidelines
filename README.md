@@ -17,9 +17,9 @@ We'll talk about how to style the code and what patterns to use.
     Always use `spaces` instead of `tabs` and use `4` spaces as indentation level.
     
     > Reason:
-    - `spaces` instead of `tabs` makes it consistent across different editors.
-    - `2` spaces is too small and makes it hard to see where a different indentation level begins.
-    - Anything bigger than `4` spaces is not necessary and will just make the code harder to read due to it going to the right side of the screen.
+    > - `spaces` instead of `tabs` makes it consistent across different editors.
+    > - `2` spaces is too small and makes it hard to see where a different indentation level begins.
+    > - Anything bigger than `4` spaces is not necessary and will just make the code harder to read due to it going to the right side of the screen.
     
   - [2]() File
     
@@ -43,11 +43,11 @@ We'll talk about how to style the code and what patterns to use.
     
     // good
     struct SomeStruct {
-    	
-    	func someFunction() {
-    		// …
-    	}
-    	
+        
+        func someFunction() {
+            // …
+        }
+        
     }
     ```
     
@@ -94,9 +94,9 @@ We'll talk about how to style the code and what patterns to use.
     
     ```swift
     func someFunction() -> Int {
-    	let x = 2
-    	// …
-    	return y
+        let x = 2
+        // …
+        return y
     }
     ```
     
@@ -137,8 +137,8 @@ We'll talk about how to style the code and what patterns to use.
     If you end the line opening something, start a separate line with the same indentation closing that.
     
     > Reason:
-    - Aligning a second parameter with the first that is on the same line as the opening parentheses makes the indentation dependent on the function name.
-    - Not closing parentheses on a separate line makes it harder to see where the declaration ends.
+    > - Aligning a second parameter with the first that is on the same line as the opening parentheses makes the indentation dependent on the function name.
+    > - Not closing parentheses on a separate line makes it harder to see where the declaration ends.
     
     ```swift
     // bad
@@ -148,18 +148,43 @@ We'll talk about how to style the code and what patterns to use.
     // bad
     func myFunction(x: Int,
                     y: Int) { ... }
-    
+
     // good
     func myFunction(x: Int, y: Int) { ... }
     
     // good
     func myFunction(
-    	x: Int,
-    	y: Int
+        x: Int,
+        y: Int
     ) { ... }
     ```
     
-  - [8]() Indenting Arrays and Dictionaries
+  - [8]() Functions, `if/else/...` brackets
+    
+    Don't leave the opening bracket on a separate line.
+    
+    > Reason: easier to see what the opening block connects to.
+    
+    ```swift
+    // bad
+    if condition
+    {
+        // ...
+    }
+    else
+    {
+        // ...
+    }
+    
+    // good
+    if condition {
+        // ...
+    } else {
+        // ...
+    }
+    ```
+    
+  - [9]() Indenting Arrays and Dictionaries
     
     Similar to function parameters.
     
@@ -173,19 +198,20 @@ We'll talk about how to style the code and what patterns to use.
     
     // good
     let array = [
-    	1,
-    	2,
-    	3
+        1,
+        2,
+        3
     ]
     
     // good
     let dictionary = [
-    	"1": 1,
-    	"2": 2,
-    	"3"
+        "1": 1,
+        "2": 2,
+        "3"
     ]
     ```
-  - [9]() `self`
+    
+  - [10]() `self`
     
     Use `self` only when necessary, inside closures.
     
@@ -227,29 +253,177 @@ We'll talk about how to style the code and what patterns to use.
     
     Never ever use delegates! It's that simple. Use callbacks instead and Observables / Promises to avoid callback hell.
     
-    > Reason: the delegate pattern is hard to follow, when making a web request call you also have to figure out where the delegate is being set and then find where the protocol is being implemented.
+    > Reason:
+    > - The delegate pattern is hard to follow, when making a web request call you also have to figure out where the delegate is being set and then find where the protocol is being implemented.
+    > - In other words, with delegates you keep jumping files / classes to understand the path of the code, while with lambdas it becomes more of a tree structured code, so you either go up or down the tree.
+    > - Delegates make you separate the code that is calling from the result.
+    > - Delegates make it unreasonable when you need more than one.
     
-  - [2]() Don't use `throw`'s / `exception`'s
+    ```swift
+    // bad
+    class SomeViewController: UIViewController {
+        
+        @IBOutlet weak var tableView: UITableView!
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            tableView.dataSource = self
+            tableView.delegate = self
+            
+            API.requestItems(callback: { items in
+                self.items = items
+            })
+        }
+        
+        // MARK: - Private
+        
+        private var items = [[String]]
+        
+    }
+    
+    extension SomeViewController: UITableViewDelegate {
+        
+        override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+            let item = items[indexPath.section][indexPath.row]
+            // ...
+        }
+        
+    }
+    
+    extension SomeViewController: UITableViewDataSource {
+        
+        override func numberOfSections(in tableView: UITableView) -> Int {
+            return items.count
+        }
+        
+        override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+            return items[section].count
+        }
+        
+        override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
+            let item = items[indexPath.section][indexPath.row]
+            // Configure the cell...
+            return cell
+        }
+        
+    }
+    
+    // good
+    class SomeViewController: UIViewController {
+        
+        @IBOutlet weak var tableView: UITableView!
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            API.requestItems(callback: { items in
+                self.tableView.didSelectRowAt = { indexPath in
+                    let item = items[indexPath.section][indexPath.row]
+                    // ...
+                }
+                
+                self.tableView.numberOfSections = items.count
+                self.tableView.numberOfRowsInSection = { section in
+                    return items[section].count
+                }
+                self.tableView.cellForRowAt = { indexPath in
+                    let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
+                    let item = items[indexPath.section][indexPath.row]
+                    // Configure the cell...
+                    return cell
+                }
+            })
+        }
+        
+    }
+    
+    // best
+    class SomeViewController: UIViewController {
+        
+        @IBOutlet weak var tableView: UITableView!
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            API.requestItems(callback: { items in
+                self.tableView.didSelectRow = { item in
+                    // ...
+                }
+                
+                self.tableView.data = items // accepts [[T]]
+                
+                self.tableView.cellForRow = { item in
+                    let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
+                    // Configure the cell...
+                    return cell
+                }
+            })
+        }
+        
+    }
+    ```
+    
+  - [2]() Don't use inheritance
+    
+    Always favor composition over inheritance.
+    
+    > Reason: Inheritance makes it harder to understand the code, because it forces you to know implementation details of the super class (breaking encapsulation), which, in turn, forces you to coordinate both implementations (current and super class).
+    
+  - [3]() Don't use `throw`'s / `exception`'s
     
     This is even worse than delegates, never use exceptions. Instead, return a Result monad with the possible errors.
     
     > Reason: Looking at a function signature should be enough for anyone to understand what it does, and never should you be forced to understand it's implementation. Throwing an exception forces you to look which exceptions can be thrown and when in the middle of the code (or forces you to depend on documentation, which might not always be up-to-date).
     
-  - [3]() Don't use `for` or `while` loops
+  - [4]() Don't use `for` or `while` loops
     
     Imperative programming is dead (or should be), forward we go with Declarative programming and FP.
     
     > Reason: study FP and it will become obvious, but the short version is, it's harder to follow what's going on when you use `for` and `while` loops instead of `map`, `filter`, `reduce`, etc.
     
-  - [4]() Use `RxSwift` (or some kind of `Promise`)
+  - [5]() Use `RxSwift` (or some kind of `Promise`)
     
     Whenever a future value is needed, `Promise`s are the way to go. One could go with `PromiseKit`, but the syntax for `then` is not very intuitive, since it can act as a `map` and as `forEach`. So Observables are a better, and also more flexible, alternative.
     A single value `Observable` becomes a `Promise` and if you need a stream, you already have the framework at hand.
     
     > Reason: replaces the delegate pattern with a more declarative way of coding.
 
-  - [5]() `let` vs `var`
+  - [6]() `let` vs `var`
     
     Always use `let` instead of `var` when you can.
     
     > Reason: `var` means the variable is mutable and we know from FP that mutable is bad.
+    
+  - [7]() `class` vs `struct`
+    
+    Always prefer `struct` over `class`. Only use `class` if the framework demands it.
+    
+    > Reason: value semantics is much easier to understand than reference, therefore, less prone to bugs. For better understanding, study Functional Programming.
+    
+  - [8]() Early returns
+    
+    Always prefer early returns rather than nested `if`s.
+    
+    > Reason: easier to follow the happy path and reduces cyclomatic complexity.
+    
+    ```swift
+    // bad
+    func someFunction(optionalBooleanVariable: Bool?) {
+        if let booleanVariable = optionalBooleanVariable {
+            if booleanVariable {
+                // ...
+            }
+        }
+    }
+    
+    // good
+    func someFunction(optionalBooleanVariable: Bool?) {
+        guard let booleanVariable = optionalBooleanVariable  else { return }
+        
+        guard booleanVariable else { return }
+        
+        // ...
+    }
+    ```
